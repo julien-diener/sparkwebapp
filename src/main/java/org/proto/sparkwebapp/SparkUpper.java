@@ -15,8 +15,25 @@ import java.net.URI;
 
 
 public class SparkUpper {
+    static JavaSparkContext sparkContext;
+    static String master;
+
+    public static void initSpark(String newMaster){
+        if(master!=newMaster && sparkContext!=null){
+            sparkContext.stop();
+            sparkContext = null;
+        }
+        if(sparkContext ==null) {
+            master = newMaster;
+            SparkConf conf = new SparkConf().setAppName("Spark Upper case conversion").setMaster(master);
+            conf.setJars(JavaSparkContext.jarOfClass(SparkUpper.class));
+
+            sparkContext = new JavaSparkContext(conf);
+        }
+    }
 
     public static void upper(String inputFile, String outputDir, String master, String namenode){
+        initSpark(master);
 
         // delete output directory
         // -----------------------
@@ -36,22 +53,13 @@ public class SparkUpper {
             System.out.println(e.getMessage());
         }
 
-
-        // Init spark context
-        // ------------------
-        SparkConf conf = new SparkConf().setAppName("Spark Upper case conversion").setMaster(master);
-        conf.setJars(JavaSparkContext.jarOfClass(SparkUpper.class));
-
-        JavaSparkContext sc = new JavaSparkContext(conf);
-
-
         // file conversion with spark
         // --------------------------
         if(namenode!=null){
             inputFile = namenode+inputFile;
             outputDir = namenode+outputDir;
         }
-        JavaRDD<String> inputRdd = sc.textFile(inputFile);
+        JavaRDD<String> inputRdd = sparkContext.textFile(inputFile).cache();
         //   for Java 8:
         //   JavaRDD<String> outputRdd = inputRdd.map(Converter::convertLine);
 
